@@ -1,0 +1,65 @@
+import { betterAuth } from 'better-auth'
+import { pool } from '@/lib/db'
+
+const secret = process.env.BETTER_AUTH_SECRET
+
+if (!secret) {
+  throw new Error('BETTER_AUTH_SECRET is not configured.')
+}
+
+const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL
+const v0PreviewOrigin = 'https://ai-build-troubleshooting-ctech-ai.v0.build'
+const v0Origins = [
+  process.env.V0_RUNTIME_URL,
+  process.env.V0_DEV_APP_URL,
+  process.env.V0_BUILD_URL,
+  process.env.V0_SANDBOX_URL,
+  ...(process.env.NODE_ENV === 'development' ? [v0PreviewOrigin] : []),
+].filter((origin): origin is string => Boolean(origin))
+const baseURL =
+  process.env.BETTER_AUTH_URL ??
+  (deploymentHost
+    ? `https://${deploymentHost}`
+    : process.env.V0_RUNTIME_URL ??
+      (process.env.NODE_ENV === 'development' ? v0PreviewOrigin : undefined))
+
+export const auth = betterAuth({
+  secret,
+  database: pool,
+  baseURL,
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+  },
+  trustedOrigins: [
+    ...(process.env.NODE_ENV === 'development'
+      ? ['http://localhost:3000', ...v0Origins]
+      : []),
+    ...(process.env.NODE_ENV === 'production'
+      ? [
+          ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+          'https://v0-ctech-ai.vercel.app',
+          ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+          ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
+            ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
+            : []),
+        ]
+      : []),
+  ],
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
+  ...(process.env.NODE_ENV === 'development'
+    ? {
+        advanced: {
+          defaultCookieAttributes: {
+            sameSite: 'none' as const,
+            secure: true,
+          },
+        },
+      }
+    : {}),
+})
