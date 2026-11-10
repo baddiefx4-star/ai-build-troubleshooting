@@ -8,20 +8,23 @@ if (!secret) {
 }
 
 const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL
-const v0PreviewOrigin = 'https://ai-build-troubleshooting-ctech-ai.v0.build'
+const v0PreviewOrigins = [
+  'https://ai-build-troubleshooting-ctech-ai.v0.build',
+  'https://ctech-ai-zip-ctech-ai.v0.build',
+]
 const v0Origins = [
   process.env.V0_RUNTIME_URL,
   process.env.V0_DEV_APP_URL,
   process.env.V0_BUILD_URL,
   process.env.V0_SANDBOX_URL,
-  ...(process.env.NODE_ENV === 'development' ? [v0PreviewOrigin] : []),
+  ...(process.env.NODE_ENV === 'development' ? v0PreviewOrigins : []),
 ].filter((origin): origin is string => Boolean(origin))
 const baseURL =
   process.env.BETTER_AUTH_URL ??
   (deploymentHost
     ? `https://${deploymentHost}`
     : process.env.V0_RUNTIME_URL ??
-      (process.env.NODE_ENV === 'development' ? v0PreviewOrigin : undefined))
+      (process.env.NODE_ENV === 'development' ? v0PreviewOrigins[0] : undefined))
 
 export const auth = betterAuth({
   secret,
@@ -42,6 +45,7 @@ export const auth = betterAuth({
           ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
           'https://v0-ctech-ai.vercel.app',
           'https://ctech-ai.com',
+          ...v0PreviewOrigins,
           ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
           ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
             ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
