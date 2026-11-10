@@ -119,7 +119,7 @@ export function Sidebar({
       <aside
         aria-label="Chat history"
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-sidebar-border bg-[linear-gradient(180deg,color-mix(in_oklab,var(--sidebar)_96%,var(--primary)_4%),var(--sidebar))] text-sidebar-foreground shadow-[10px_0_40px_-28px_color-mix(in_oklab,var(--primary)_35%,transparent)] transition-transform duration-300 md:static md:z-auto md:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 md:static md:z-auto md:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full md:hidden',
         )}
       >

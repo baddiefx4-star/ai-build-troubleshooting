@@ -43,34 +43,34 @@
 
 :root {
   color-scheme: dark;
-  --background: oklch(0.17 0.012 24);
-  --foreground: oklch(0.98 0.006 24);
-  --card: oklch(0.215 0.014 24);
-  --card-foreground: oklch(0.98 0.006 24);
-  --popover: oklch(0.235 0.014 24);
-  --popover-foreground: oklch(0.98 0.006 24);
-  --primary: oklch(0.67 0.22 26);
+  --background: oklch(0.135 0.01 24);
+  --foreground: oklch(0.96 0.006 24);
+  --card: oklch(0.18 0.012 24);
+  --card-foreground: oklch(0.96 0.006 24);
+  --popover: oklch(0.2 0.012 24);
+  --popover-foreground: oklch(0.96 0.006 24);
+  --primary: oklch(0.64 0.21 26);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.255 0.014 24);
-  --secondary-foreground: oklch(0.98 0.006 24);
-  --muted: oklch(0.255 0.014 24);
-  --muted-foreground: oklch(0.76 0.015 24);
-  --accent: oklch(0.29 0.018 24);
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.64 0.23 25);
-  --border: oklch(0.34 0.016 24);
-  --input: oklch(0.34 0.016 24);
-  --ring: oklch(0.67 0.22 26);
+  --secondary: oklch(0.22 0.012 24);
+  --secondary-foreground: oklch(0.96 0.006 24);
+  --muted: oklch(0.22 0.012 24);
+  --muted-foreground: oklch(0.69 0.015 24);
+  --accent: oklch(0.25 0.016 24);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.6 0.22 25);
+  --border: oklch(0.29 0.014 24);
+  --input: oklch(0.29 0.014 24);
+  --ring: oklch(0.64 0.21 26);
   --radius: 0.75rem;
-  --sidebar: oklch(0.145 0.01 24);
-  --sidebar-foreground: oklch(0.96 0.006 24);
-  --sidebar-primary: oklch(0.67 0.22 26);
+  --sidebar: oklch(0.115 0.008 24);
+  --sidebar-foreground: oklch(0.92 0.006 24);
+  --sidebar-primary: oklch(0.64 0.21 26);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.235 0.014 24);
-  --sidebar-accent-foreground: oklch(0.99 0 0);
-  --sidebar-border: oklch(0.285 0.014 24);
-  --sidebar-ring: oklch(0.67 0.22 26);
-  --auth-glow: oklch(0.5 0.2 26 / 0.2);
+  --sidebar-accent: oklch(0.2 0.012 24);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.22 0.012 24);
+  --sidebar-ring: oklch(0.64 0.21 26);
+  --auth-glow: oklch(0.45 0.18 26 / 0.18);
 }
 
 .auth-backdrop {
