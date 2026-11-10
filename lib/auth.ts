@@ -41,6 +41,7 @@ export const auth = betterAuth({
       ? [
           ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
           'https://v0-ctech-ai.vercel.app',
+          'https://ctech-ai.com',
           ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
           ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
             ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
