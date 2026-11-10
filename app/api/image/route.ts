@@ -1,3 +1,4 @@
+import { put } from '@vercel/blob'
 import { z } from 'zod'
 import { getAuthenticatedSession } from '@/lib/auth-session'
 import { consumePrimaryModelAllowance, releasePrimaryModelAllowance } from '@/lib/billing/service'
@@ -21,6 +22,29 @@ function rawMessageContent(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   const content = (value as { content?: unknown }).content
   return typeof content === 'string' ? content : undefined
+}
+
+async function generateFallbackImage(prompt: string, signal: AbortSignal) {
+  const apiKey = process.env.api_key_2
+  if (!apiKey) return null
+
+  const response = await fetch(`https://apis.megan.qzz.io/api/ai/image/sdxl?prompt=${encodeURIComponent(prompt)}&api_key=${encodeURIComponent(apiKey)}`, {
+    signal,
+    headers: { Accept: 'application/json, image/*' },
+  })
+  if (!response.ok) throw new Error(`Fallback image service returned ${response.status}`)
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.startsWith('image/')) {
+    return { mediaType: contentType.split(';')[0], base64: Buffer.from(await response.arrayBuffer()).toString('base64') }
+  }
+
+  const payload = await response.json() as { url?: unknown; image?: unknown; image_url?: unknown; data?: unknown }
+  const imageUrl = [payload.url, payload.image, payload.image_url, payload.data].find((value): value is string => typeof value === 'string' && /^https?:\/\//.test(value))
+  if (!imageUrl) throw new Error('Fallback image service returned no image.')
+  const imageResponse = await fetch(imageUrl, { signal })
+  if (!imageResponse.ok) throw new Error('Could not download the generated image.')
+  return { mediaType: imageResponse.headers.get('content-type')?.split(';')[0] || 'image/png', base64: Buffer.from(await imageResponse.arrayBuffer()).toString('base64') }
 }
 
 export async function POST(req: Request) {
@@ -50,7 +74,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'A user message is required.' }, { status: 400 })
   }
 
-  if (!process.env.AGNES_API_KEY) return Response.json({ error: 'CTECH AI image generation is temporarily unavailable.' }, { status: 503 })
+  if (!process.env.AGNES_API_KEY && !process.env.api_key_2) return Response.json({ error: 'CTECH AI image generation is temporarily unavailable.' }, { status: 503 })
 
   const userId = session.user.id
   const conversationId = parsed.data.conversationId
@@ -75,11 +99,26 @@ export async function POST(req: Request) {
   let usageEventId = allowance?.usageEventId ?? null
   try {
     await rememberConversation(userId, conversationId, parsed.data.projectId, 'creative', messages)
-    const image = await generateAgnesImage(
-      parsed.data.prompt,
-      AbortSignal.any([req.signal, AbortSignal.timeout(80_000)]),
-    )
+    const imageSignal = AbortSignal.any([req.signal, AbortSignal.timeout(80_000)])
+    let image
+    try {
+      image = process.env.AGNES_API_KEY
+        ? await generateAgnesImage(parsed.data.prompt, imageSignal)
+        : await generateFallbackImage(parsed.data.prompt, imageSignal)
+      if (!image) throw new Error('No image service configured.')
+    } catch (primaryError) {
+      if (!process.env.api_key_2 || primaryError instanceof AgnesApiError && primaryError.status !== 429 && primaryError.status !== 502 && primaryError.status !== 503) throw primaryError
+      image = await generateFallbackImage(parsed.data.prompt, imageSignal)
+      if (!image) throw primaryError
+    }
     const imageDataUrl = `data:${image.mediaType};base64,${image.base64}`
+    await put(`generated/${userId}/${conversationId}/${Date.now()}.png`, Buffer.from(image.base64, 'base64'), {
+      access: 'private',
+      contentType: image.mediaType,
+      addRandomSuffix: true,
+    }).catch((storageError) => {
+      console.error('[v0] Image storage failed', storageError)
+    })
     const messageId = await rememberAssistantReply(
       userId,
       conversationId,
