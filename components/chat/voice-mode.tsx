@@ -148,7 +148,10 @@ export function VoiceMode({ conversationId, projectId, history, onExchange, onCl
         speechQueue = speechQueue.then(async () => {
           if (!activeRef.current || controller.signal.aborted) return
           setStatus('speaking')
-          await speak(cleanSegment)
+          const playback = await speak(cleanSegment)
+          if (playback === 'aborted' && !controller.signal.aborted) {
+            throw new Error('Audio playback is unavailable. Check your device sound and try again.')
+          }
         })
       }
       const data = await readChatStream(response, setActivityLabel, (delta) => {
@@ -288,8 +291,9 @@ export function VoiceMode({ conversationId, projectId, history, onExchange, onCl
         {error ?? activityLabel ?? STATUS_TEXT[status]}
       </p>
       <main className="voice-main relative flex min-h-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center px-4 pt-4">
+        <header className="flex shrink-0 flex-col items-center gap-2 px-4 pt-5 text-center">
           <h1 className="text-sm font-medium">Live voice</h1>
+          <p className="text-sm text-muted-foreground" aria-live="polite">{error ?? activityLabel ?? STATUS_TEXT[status]}</p>
         </header>
         <div className="voice-orb-stage relative flex min-h-0 flex-1 items-center justify-center">
           <button

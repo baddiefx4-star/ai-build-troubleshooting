@@ -66,7 +66,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         : await authClient.signIn.email({ email: email.trim(), password })
 
       if (result.error) {
-        setError('We could not verify those details. Check your information and try again.')
+        const message = result.error.message?.trim() ?? ''
+        const originRejected = /origin.*(?:not allowed|trusted)|trusted.*origin/i.test(message)
+        setError(originRejected
+          ? 'This preview or deployment URL is not trusted for sign-in yet. Refresh the app and try again.'
+          : message && message !== 'UNKNOWN'
+            ? message
+            : 'We could not verify those details. Check your information and try again.')
         return
       }
 

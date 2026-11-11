@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { generateText, isStepCount, tool, type ModelMessage } from 'ai'
+import { generateText, isStepCount, streamText, tool, type ModelMessage } from 'ai'
 import { z } from 'zod'
 import { getAuthenticatedSession } from '@/lib/auth-session'
 import { consumePrimaryModelAllowance, releasePrimaryModelAllowance } from '@/lib/billing/service'
@@ -8,7 +8,7 @@ import { readJsonRequest, RequestBodyTooLargeError } from '@/lib/request-body'
 import { isSameOriginRequest } from '@/lib/request-origin'
 import { analyzePublicWebsite } from '@/lib/site-analysis'
 import { isOwnerEmail } from '@/lib/owner'
-import { generateMeganReply, isMeganPromptWithinUrlLimit, MeganPromptTooLongError } from '@/lib/megan-ai'
+import { isMeganPromptWithinUrlLimit, MeganPromptTooLongError } from '@/lib/megan-ai'
 import { AgnesApiError, createAgnesChatModel, type AgnesContentPart } from '@/lib/agnes'
 import { runSandboxTerminalCommand, SandboxRateLimitError, SandboxUnavailableError } from '@/lib/sandbox-terminal'
 import { createGeminiInteraction, formatGeminiInteraction, GeminiApiError, type GeminiInputPart } from '@/lib/gemini'
@@ -545,7 +545,7 @@ export async function POST(req: Request) {
 
       if (!voice) {
         const agnesPrompt = makeAgnesMessages(mode, messages, validatedAttachments, websiteContext || undefined, parsed.data.timeZone, project.memory)
-        const reply = await generateText({
+        const reply = streamText({
           model: createAgnesChatModel(),
           instructions: agnesPrompt.instructions,
           messages: toModelMessages(agnesPrompt.messages),
@@ -556,7 +556,12 @@ export async function POST(req: Request) {
           maxOutputTokens: mode === 'code' ? 8_192 : 6_144,
           abortSignal: AbortSignal.any([req.signal, AbortSignal.timeout(108_000)]),
         })
-        const text = reply.text.trim()
+        let text = ''
+        for await (const delta of reply.textStream) {
+          text += delta
+          send({ type: 'delta', text: delta })
+        }
+        text = text.trim()
         if (!text) throw new Error('Agnes returned an empty response.')
         const messageId = await rememberAssistantReply(userId, parsed.data.conversationId, mode, text, commandActivity)
         usageEventId = null
@@ -564,13 +569,22 @@ export async function POST(req: Request) {
         return
       }
 
-      const reply = await generateMeganReply(
-        openHermesPrompt,
-        AbortSignal.any([req.signal, AbortSignal.timeout(108_000)]),
-      )
-      const messageId = await rememberAssistantReply(userId, parsed.data.conversationId, mode, reply.text)
+      const reply = streamText({
+        model: createAgnesChatModel(),
+        prompt: openHermesPrompt,
+        maxOutputTokens: 1_024,
+        abortSignal: AbortSignal.any([req.signal, AbortSignal.timeout(108_000)]),
+      })
+      let text = ''
+      for await (const delta of reply.textStream) {
+        text += delta
+        send({ type: 'delta', text: delta })
+      }
+      text = text.trim()
+      if (!text) throw new Error('CTECH AI returned an empty voice response.')
+      const messageId = await rememberAssistantReply(userId, parsed.data.conversationId, mode, text)
       usageEventId = null
-      send({ type: 'result', text: reply.text, messageId, model: 'CTECH AI Voice' })
+      send({ type: 'result', text, messageId, model: 'CTECH AI Voice' })
     } catch (error) {
       if (usageEventId) {
         try {
