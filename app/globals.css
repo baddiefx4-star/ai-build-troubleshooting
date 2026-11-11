@@ -74,6 +74,61 @@
   --surface-glow: oklch(0.82 0.09 77 / 0.38);
 }
 
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: oklch(0.16 0.012 255);
+  --foreground: oklch(0.94 0.012 82);
+  --card: oklch(0.205 0.016 255);
+  --card-foreground: oklch(0.94 0.012 82);
+  --popover: oklch(0.22 0.016 255);
+  --popover-foreground: oklch(0.94 0.012 82);
+  --primary: oklch(0.72 0.18 31);
+  --primary-foreground: oklch(0.16 0.02 28);
+  --secondary: oklch(0.26 0.018 255);
+  --secondary-foreground: oklch(0.92 0.012 82);
+  --muted: oklch(0.25 0.015 255);
+  --muted-foreground: oklch(0.7 0.018 82);
+  --accent: oklch(0.3 0.022 255);
+  --accent-foreground: oklch(0.96 0.01 82);
+  --destructive: oklch(0.68 0.19 25);
+  --border: oklch(0.34 0.018 255);
+  --input: oklch(0.34 0.018 255);
+  --ring: oklch(0.72 0.18 31);
+  --sidebar: oklch(0.13 0.012 255);
+  --sidebar-foreground: oklch(0.92 0.012 82);
+  --sidebar-primary: oklch(0.72 0.18 31);
+  --sidebar-primary-foreground: oklch(0.16 0.02 28);
+  --sidebar-accent: oklch(0.23 0.018 255);
+  --sidebar-accent-foreground: oklch(0.95 0.01 82);
+  --sidebar-border: oklch(0.28 0.016 255);
+  --sidebar-ring: oklch(0.72 0.18 31);
+  --auth-glow: oklch(0.68 0.16 31 / 0.2);
+  --surface-glow: oklch(0.72 0.15 31 / 0.2);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.theme-toggle:hover { background-color: var(--accent); }
+.theme-toggle:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.theme-toggle-icon { width: 1rem; height: 1rem; animation: theme-icon-pop 300ms ease both; }
+
+.theme-switching,
+.theme-switching body,
+.theme-switching body * {
+  transition: background-color 360ms ease, color 360ms ease, border-color 360ms ease, box-shadow 360ms ease !important;
+}
+
 .auth-backdrop {
   background:
     radial-gradient(ellipse at 12% 12%, var(--auth-glow), transparent 28rem),
@@ -315,6 +370,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes theme-icon-pop {
+  from { opacity: 0.3; transform: rotate(-35deg) scale(0.65); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+
 @keyframes auth-orbit {
   to { transform: rotate(360deg); }
 }
@@ -345,10 +405,14 @@
   .auth-orb-core,
   .voice-orb-glow-two,
   .voice-orb-core,
-  .voice-orb-light {
+  .voice-orb-light,
+  .theme-toggle-icon {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+  .theme-switching,
+  .theme-switching body,
+  .theme-switching body * { transition-duration: 0.01ms !important; }
   .voice-orb-core,
   .voice-orb-glow,
   .voice-end-button { transition-duration: 0.01ms; }

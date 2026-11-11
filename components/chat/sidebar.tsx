@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import type { Conversation, Project } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Logo } from './logo'
 
 type Props = {
@@ -305,6 +306,7 @@ export function Sidebar({
               <p className="truncate text-xs text-muted-foreground" title={userEmail}>{userEmail}</p>
             </div>
           </div>
+          <ThemeToggle className="w-full justify-start border-transparent bg-transparent" />
           <button
             type="button"
             onClick={onSignOut}

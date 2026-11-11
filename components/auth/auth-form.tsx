@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, AudioLines, LoaderCircle, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { Logo, LogoMark } from '@/components/chat/logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -67,12 +68,10 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
       if (result.error) {
         const message = result.error.message?.trim() ?? ''
-        const originRejected = /origin.*(?:not allowed|trusted)|trusted.*origin/i.test(message)
+        const originRejected = /invalid origin|origin.*(?:not allowed|trusted)|trusted.*origin/i.test(message)
         setError(originRejected
-          ? 'This preview or deployment URL is not trusted for sign-in yet. Refresh the app and try again.'
-          : message && message !== 'UNKNOWN'
-            ? message
-            : 'We could not verify those details. Check your information and try again.')
+          ? 'This app address is not enabled for sign-in. Open CTECH AI from its official link and try again.'
+          : 'We could not verify those details. Check your information and try again.')
         return
       }
 
@@ -86,12 +85,15 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   }
 
   return (
-    <main className="auth-backdrop flex min-h-svh items-center justify-center overflow-hidden px-4 py-3 sm:px-6 sm:py-10">
+    <main className="auth-backdrop flex min-h-svh items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-3 sm:px-6 sm:py-10 lg:overflow-hidden">
       <div className="auth-shell-enter relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-border/80 bg-card/90 shadow-2xl shadow-black/35 backdrop-blur-xl lg:min-h-[680px] lg:grid-cols-[1.04fr_0.96fr]">
         <section className="auth-art relative hidden min-h-[680px] flex-col overflow-hidden p-10 lg:flex xl:p-12" aria-label="About CTECH AI">
           <div className="relative z-10 flex items-center justify-between gap-4">
             <Logo />
-            <span className="rounded-full border border-border/70 bg-background/45 px-3 py-1.5 font-mono text-[9px] tracking-[0.16em] text-muted-foreground">PRIVATE BY DESIGN</span>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <span className="rounded-full border border-border/70 bg-background/45 px-3 py-1.5 font-mono text-[9px] tracking-[0.16em] text-muted-foreground">PRIVATE BY DESIGN</span>
+            </div>
           </div>
 
           <div className="auth-orbit-scene" aria-hidden="true">
@@ -132,7 +134,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             />
             <div className="mb-5 flex items-center justify-between gap-4 lg:hidden">
               <Logo />
-              <span className="rounded-full border border-border/70 bg-background/45 px-3 py-1.5 font-mono text-[9px] tracking-[0.14em] text-muted-foreground">CTECH AI</span>
+              <ThemeToggle />
             </div>
 
             <Card className="border-0 bg-transparent py-0 shadow-none ring-0">

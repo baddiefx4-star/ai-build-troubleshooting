@@ -1,5 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
+import { cookies } from 'next/headers'
 import type { Metadata, Viewport } from 'next'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -17,22 +19,27 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
+  colorScheme: 'light dark',
   themeColor: '#f7f3eb',
   width: 'device-width',
   initialScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const savedTheme = (await cookies()).get('ctech-theme')?.value
+  const initialTheme = savedTheme === 'dark' ? 'dark' : 'light'
+
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} bg-background`}>
+    <html lang="en" data-theme={initialTheme} className={`${geist.variable} ${geistMono.variable} bg-background`}>
       <body className="antialiased">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <ThemeProvider initialTheme={initialTheme}>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </ThemeProvider>
       </body>
     </html>
   )
