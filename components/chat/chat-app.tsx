@@ -23,6 +23,10 @@ function titleFrom(text: string) {
   return t.length > 42 ? `${t.slice(0, 42)}…` : t || 'New chat'
 }
 
+function isImageGenerationRequest(text: string) {
+  return /\b(?:generate|create|draw|make|illustrate|render|design)\b.{0,48}\b(?:image|picture|photo|artwork|illustration|wallpaper|logo)\b|\b(?:image|picture|photo|artwork|illustration|wallpaper|logo)\b.{0,48}\b(?:of|for|with)\b/i.test(text)
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: 'no-store' })
   const data = await response.json().catch(() => null)
@@ -68,7 +72,6 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
   )
 
   const abortRef = useRef<AbortController | null>(null)
-  const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const activeIdRef = useRef<string | null>(null)
   activeIdRef.current = activeId
@@ -149,34 +152,19 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
     [activeProjectId, mode],
   )
 
-  const typeOut = useCallback(
-    (convId: string, msgId: string, full: string) => {
-      setTypingId(msgId)
-      let shown = 0
-      const step = Math.max(3, Math.ceil(full.length / 180))
-      typeTimerRef.current = setInterval(() => {
-        shown = Math.min(full.length, shown + step)
-        const slice = full.slice(0, shown)
-        updateConversation(convId, (c) => ({
-          ...c,
-          messages: c.messages.map((m) => (m.id === msgId ? { ...m, content: slice } : m)),
-        }))
-        if (shown >= full.length) {
-          if (typeTimerRef.current) clearInterval(typeTimerRef.current)
-          typeTimerRef.current = null
-          setTypingId(null)
-        }
-      }, 16)
-    },
-    [updateConversation],
-  )
-
   const generate = useCallback(
     async (convId: string, projectId: string, history: Message[], chatMode: ChatMode, attachments: ChatAttachmentPayload[] = []) => {
       setPending(true)
       setActivityLabel('Thinking…')
       setLiveCommandActivity([])
       const commandActivity: CommandActivity[] = []
+      const assistantId = uid()
+      setTypingId(assistantId)
+      updateConversation(convId, (conversation) => ({
+        ...conversation,
+        updatedAt: Date.now(),
+        messages: [...conversation.messages, { id: assistantId, role: 'assistant', content: '' }],
+      }))
       const controller = new AbortController()
       abortRef.current = controller
       const safeHistory = limitChatTranscript(history.filter((message) => !message.error))
@@ -187,7 +175,14 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
           body: JSON.stringify({ conversationId: convId, projectId, messages: safeHistory, mode: chatMode, attachments, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
           signal: controller.signal,
         })
-        const result = await readChatStream(response, setActivityLabel, undefined, (activity) => {
+        const result = await readChatStream(response, setActivityLabel, (delta) => {
+          updateConversation(convId, (conversation) => ({
+            ...conversation,
+            messages: conversation.messages.map((message) => message.id === assistantId
+              ? { ...message, content: message.content + delta }
+              : message),
+          }))
+        }, (activity) => {
           const index = commandActivity.findIndex((item) => item.id === activity.id)
           if (index < 0) commandActivity.push(activity)
           else commandActivity[index] = activity
@@ -196,41 +191,38 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
         updateConversation(convId, (conversation) => ({
           ...conversation,
           updatedAt: Date.now(),
-          messages: [...conversation.messages, {
-            id: result.messageId,
-            role: 'assistant',
-            content: '',
-            commandActivity: result.commandActivity.length ? result.commandActivity : undefined,
-          }],
+          messages: conversation.messages.map((message) => message.id === assistantId
+            ? { ...message, id: result.messageId, content: result.text || '(No response)', commandActivity: result.commandActivity.length ? result.commandActivity : undefined }
+            : message),
         }))
         setPending(false)
+        setTypingId(null)
         setActivityLabel(null)
         setLiveCommandActivity([])
-        typeOut(convId, result.messageId, result.text || '(No response)')
         void mutateHistory()
       } catch (error) {
         setPending(false)
+        setTypingId(null)
         setActivityLabel(null)
         setLiveCommandActivity([])
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) {
+          updateConversation(convId, (conversation) => ({
+            ...conversation,
+            messages: conversation.messages.filter((message) => message.id !== assistantId),
+          }))
+          return
+        }
         updateConversation(convId, (conversation) => ({
           ...conversation,
-          messages: [
-            ...conversation.messages,
-            {
-              id: uid(),
-              role: 'assistant',
-              content: error instanceof Error ? error.message : 'Something went wrong.',
-              commandActivity: commandActivity.length ? commandActivity : undefined,
-              error: true,
-            },
-          ],
+          messages: conversation.messages.map((message) => message.id === assistantId
+            ? { ...message, content: error instanceof Error ? error.message : 'Something went wrong.', error: true }
+            : message),
         }))
       } finally {
         if (abortRef.current === controller) abortRef.current = null
       }
     },
-    [mutateHistory, typeOut, updateConversation],
+    [mutateHistory, updateConversation],
   )
 
   const generateImage = useCallback(
@@ -306,6 +298,10 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
       const messageText = cleanText || 'Please review the attached files.'
       const chatMode = overrideMode ?? mode
       if (overrideMode) setMode(overrideMode)
+      if (!attachments.length && isImageGenerationRequest(cleanText)) {
+        void generateImage(cleanText)
+        return
+      }
       const convId = ensureConversation(messageText)
       const userMsg: Message = { id: uid(), role: 'user', content: messageText, attachments: attachmentList }
       if (attachments.length) attachmentPayloadsRef.current.set(userMsg.id, attachments)
@@ -314,13 +310,11 @@ export function ChatApp({ userEmail }: { userEmail: string }) {
       updateConversation(convId, (conversation) => ({ ...conversation, mode: chatMode, updatedAt: Date.now(), messages: [...conversation.messages, userMsg] }))
       generate(convId, activeProjectId, history, chatMode, attachments)
     },
-    [activeProjectId, busy, ensureConversation, generate, historyLoading, mode, updateConversation],
+    [activeProjectId, busy, ensureConversation, generate, generateImage, historyLoading, mode, updateConversation],
   )
 
   const stop = () => {
     abortRef.current?.abort()
-    if (typeTimerRef.current) clearInterval(typeTimerRef.current)
-    typeTimerRef.current = null
     setPending(false)
     setTypingId(null)
     setActivityLabel(null)

@@ -58,6 +58,7 @@ let currentAbort: AbortController | null = null
 export function stopSpeaking() {
   currentAbort?.abort()
   currentAbort = null
+  if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
   if (sharedAudio) {
     sharedAudio.pause()
     sharedAudio.removeAttribute('src')
@@ -84,7 +85,7 @@ function splitSpeechText(text: string, maxChars = 2_300) {
   return chunks
 }
 
-export async function speak(text: string): Promise<'elevenlabs' | 'aborted'> {
+export async function speak(text: string): Promise<'elevenlabs' | 'browser' | 'aborted'> {
   stopSpeaking()
   const controller = new AbortController()
   currentAbort = controller
@@ -129,6 +130,27 @@ export async function speak(text: string): Promise<'elevenlabs' | 'aborted'> {
     }
     return 'elevenlabs'
   } catch {
-    return 'aborted'
+    if (controller.signal.aborted || typeof window === 'undefined' || !window.speechSynthesis) return 'aborted'
+
+    return new Promise<'browser' | 'aborted'>((resolve) => {
+      const speech = window.speechSynthesis
+      speech.cancel()
+      const utterance = new SpeechSynthesisUtterance(clean)
+      let settled = false
+      const finish = (result: 'browser' | 'aborted') => {
+        if (settled) return
+        settled = true
+        controller.signal.removeEventListener('abort', onAbort)
+        resolve(result)
+      }
+      const onAbort = () => {
+        speech.cancel()
+        finish('aborted')
+      }
+      utterance.onend = () => finish('browser')
+      utterance.onerror = () => finish('aborted')
+      controller.signal.addEventListener('abort', onAbort, { once: true })
+      speech.speak(utterance)
+    })
   }
 }

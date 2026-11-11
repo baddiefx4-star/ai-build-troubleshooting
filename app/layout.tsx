@@ -7,8 +7,8 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'CTECH AI — Private assistant and project workspace',
-  description: 'A private AI workspace with account-scoped conversations, live voice, and isolated project commands.',
+  title: 'CTECH AI — Your creative AI workspace',
+  description: 'A fast personal AI workspace for conversations, image creation, research, voice, and project work.',
   generator: 'v0.app',
   icons: {
     icon: '/icon.svg',
@@ -17,8 +17,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#1a1112',
+  colorScheme: 'light',
+  themeColor: '#f7f3eb',
   width: 'device-width',
   initialScale: 1,
 }
